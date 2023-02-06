@@ -1,0 +1,7 @@
+Cozinha|Cliente
+Cozinha|Garçom
+Cliente|Garçom
+Cozinha|Cliente
+Garçom|Cozinha
+Garçom|Cliente
+Cozinha|Cliente
