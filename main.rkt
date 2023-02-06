@@ -33,7 +33,7 @@
                           [label "Começar"]
                           [callback (lambda (button event)
                                       (let ([selected-choice (send choice get-string-selection)])
-                                        (set! torreCozinha (gerarTorre (string->number selected-choice) 0))
+                                        (set! torreCozinha (gerarTorre (string->number selected-choice) 0)) ;; gera torre da cozinha (hamburguer inicial)
                                         (send frameMenu show #f)
                                         (send frameJogo show #t)
                                         ))]))
@@ -48,24 +48,27 @@
                                            (define nome-arquivo (string-append "src/solucao" selected-choice ".txt"))
                                            ;ate aqui ok
 
-                                           (define-values (esq dir) (le-arquivo nome-arquivo))
+                                           (define-values (esq dir) (le-arquivo nome-arquivo)) ;; seta valores (list) de origem  e destino com base no arquivo txt
                                            (set! direita_destino dir)
                                            (set! esquerda_origem esq)
                                            ;problema acima
 
-                                           (set! torreCozinha (gerarTorre (string->number selected-choice) 0))
-                                           ;  (refreshMovimentacoes esquerda direita)
-                                           ;  (desenharTorres dc torreCozinha torreGarcom torreCliente cozinha garcom cliente)
+                                           (set! torreCozinha (gerarTorre (string->number selected-choice) 0)) ;; gera torre da cozinha (hamburguer inicial)
+
                                            (send frameMenu show #f)
                                            (send frameAutomatico show #t)
+                                           
+                                           ;; seta o timer, que vai fazer as atualizações necessarias de redesenhar o canva  e etc
                                            (set! timer (new timer%
                                                             [interval 1000]
                                                             [notify-callback
                                                              (lambda ()
-                                                               (define origem_element (last esquerda_origem))
-                                                               (define destino_element (last direita_destino))
-                                                               (set! esquerda_origem (reverse (cdr (reverse esquerda_origem))))
-                                                               (set! direita_destino (reverse (cdr (reverse direita_destino))))
+                                                               (define origem_element (last esquerda_origem)) ;; pega a origem da peça da etapa atual 
+                                                               (define destino_element (last direita_destino)) ;; pega o destino da peça da etapa atual 
+                                                               (set! esquerda_origem (reverse (cdr (reverse esquerda_origem)))) ;; remove o ultimo elemento da lista
+                                                               (set! direita_destino (reverse (cdr (reverse direita_destino)))) ;; remove o ultimo elemento da lista
+                                                               
+                                                               ;;Se foi feita alguma movimentacao ele atualiza a tela, caso nao, ele atualiza e da gameOver
                                                                (if (refreshMovimentacoes origem_element destino_element) (atualizarTela dc) (gameOverAutomatico dc)))]))
 
 
@@ -74,8 +77,10 @@
 
 ; ========================================================================== Jogo
 
+;; variavel referente a altura que vai ser acrescentada para colocar uma peça em cima da outra
 (define constanteContador 15)
 
+;; função que desenha as pecas de uma determinada torre
 (define (desenharPecas dc lista_torre struct_torre contador)
   (send dc set-scale 2 2)
   (let ([peca (get-at lista_torre contador)])
@@ -91,6 +96,7 @@
     )
   )
 
+;; funcao que realiza as transferencias de uma peça do topo de uma torre para o topo de outra torre
 (define (refreshMovimentacoes origem destino)
   ; a cada 1s, while esquerda.at(pos)!=empty
   ;      transferir peça
@@ -113,7 +119,7 @@
     )
   )
 
-
+;; função que desenha todas as torres
 (define (desenharTorres dc cozinha_lista  garcom_lista  cliente_lista cozinha_struct garcom_struct cliente_struct)
   (send dc set-scale 2 2)
   (desenharPecas dc cozinha_lista cozinha_struct 0)
