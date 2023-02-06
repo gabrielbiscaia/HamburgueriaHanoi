@@ -131,6 +131,7 @@
   (send dc draw-bitmap (ingrediente-imagem (peca-ingrediente peca))  (torre-x destino_struct) (- (torre-y destino_struct) (* constanteContador (length destino_lista))))
   )
 
+;;============================================================================ Funções trasnferencia de torre
 (define (transferirClienteGarcom)
 
   (if (empty? torreGarcom)
@@ -240,6 +241,7 @@
 
 (define timer empty)
 
+;;função que ativa ao game over da solução automatica
 (define (gameOverAutomatico dc)
   (desenharBackground dc)
   (desenharTorres dc torreCozinha torreGarcom torreCliente cozinha garcom cliente)
@@ -248,12 +250,13 @@
   ;;ESCREVER ALGO COMO GAME OVER, VOCE GANHOU
   )
 
+;; função quea tualiza a tela, add o background e peças das torres
 (define (atualizarTela dc)
   (desenharBackground dc)
   (desenharTorres dc torreCozinha torreGarcom torreCliente cozinha garcom cliente)
   )
 
-
+;; função que desenha o background
 (define (desenharBackground dc)
   (define background-jogo (make-object bitmap% "img/bgjogo.png"))
   (send dc set-scale 1 0.9)
