@@ -1,7 +1,5 @@
-Jogo Hanói, com tematica de hamburgueria.
+Jogo da "Torre Hanói", com tematica de hamburgueria.
 
-Para rodar este jogo é preciso baixar a biblioteca  `htdp-lib`:
+O jogo é feito na linguagem Racket, sendo sua interface feito com a biblioteca nativa, racket/gui.
 
-```shell
-raco pkg install htdp-lib
-```
+O objetivo do jogo é montar o hamb
