@@ -38,6 +38,10 @@
                                         (set! altura (string->number selected-choice))
                                         (send frameMenu show #f)
                                         (send frameJogo show #t)
+                                        (set! pecaSelecionada (new message%
+                                                                   [parent frameJogo]
+                                                                   [label "Peça Selecionada: "]
+                                                                   ))
                                         ))]))
 
 ; Instancia o botão de solucionar o problema de acordo com o número de ingredientes
@@ -110,7 +114,10 @@
                           [min-width 100]
                           [min-height 50]
                           [callback (lambda (button event)
-                                      (refreshEscolha (send botaoCozinha get-label))
+                                      (cond
+                                        [(equal? (length torreCliente) altura) (void)]
+                                        [else (refreshEscolha (send botaoCozinha get-label))]
+                                        )
 
                                       (if (equal? (length torreCliente) altura)
                                           (desenharGameOver dc)
@@ -125,7 +132,11 @@
                          [min-width 100]
                          [min-height 50]
                          [callback (lambda (button event)
-                                     (refreshEscolha (send botaoGarcom get-label))
+                                     (cond
+                                       [(equal? (length torreCliente) altura) (void)]
+                                       [else (refreshEscolha (send botaoGarcom get-label))]
+                                       )
+
 
                                      (if (equal? (length torreCliente) altura)
                                          (desenharGameOver dc)
@@ -138,7 +149,10 @@
                           [min-width 100]
                           [min-height 50]
                           [callback (lambda (button event)
-                                      (refreshEscolha (send botaoCliente get-label))
+                                      (cond
+                                        [(equal? (length torreCliente) altura) (void)]
+                                        [else (refreshEscolha (send botaoCliente get-label))]
+                                        )
 
                                       (if (equal? (length torreCliente) altura)
                                           (desenharGameOver dc)
@@ -175,6 +189,8 @@
 
 ;; variavel referente a altura que vai ser acrescentada para colocar uma peça em cima da outra
 (define constanteContador 15)
+
+(define pecaSelecionada empty)
 
 ;; função que desenha as pecas de uma determinada torre
 (define (desenharPecas dc lista_torre struct_torre contador)
@@ -283,9 +299,10 @@
     [(empty? (getTorre torreClicada))
      (printf "Torre Vazia")
      ]
-    [else (set! torreOrigem torreClicada)]
-    )
-  )
+    [else (set! torreOrigem torreClicada)
+          (display altura)
+          (send pecaSelecionada set-label (string-append "Peça: " (number->string (- (+ altura 1)(getValorPecaSelecionada)))))]))
+
 
 (define (getTorre nome)
   (cond
@@ -442,6 +459,12 @@
   )
 
 ; ========================================================================== Util
+
+(define (getValorPecaSelecionada)
+  (cond
+    [(not(empty? (getTorre torreOrigem)))
+     (peca-valor (last (getTorre torreOrigem)))]
+    [else 0]))
 
 ;Essa função é chamada assim que é clicado o botão "Solucionar"
 ;A cada 1 segundo ele vai executar o que está dentro do [notify-callback]
