@@ -2,7 +2,8 @@
 
 (require racket/draw)
 
-; ========================================================================== Menu
+; ==================================================================================================== Interfaces
+; ==================================================================================================== Interface Menu
 ; Cria um frame e escolhe o que vai estar escrito em cima
 (define frameMenu (new frame%
                        [label "Menu"]
@@ -34,6 +35,7 @@
                           [callback (lambda (button event)
                                       (let ([selected-choice (send choice get-string-selection)])
                                         (set! torreCozinha (gerarTorre (string->number selected-choice) 0)) ;; gera torre da cozinha (hamburguer inicial)
+                                        (set! altura (string->number selected-choice))
                                         (send frameMenu show #f)
                                         (send frameJogo show #t)
                                         ))]))
@@ -54,26 +56,120 @@
                                            ;problema acima
 
                                            (set! torreCozinha (gerarTorre (string->number selected-choice) 0)) ;; gera torre da cozinha (hamburguer inicial)
-
+                                           (set! altura (string->number selected-choice))
                                            (send frameMenu show #f)
                                            (send frameAutomatico show #t)
-                                           
+
                                            ;; seta o timer, que vai fazer as atualizações necessarias de redesenhar o canva  e etc
                                            (set! timer (new timer%
                                                             [interval 1000]
                                                             [notify-callback
                                                              (lambda ()
-                                                               (define origem_element (last esquerda_origem)) ;; pega a origem da peça da etapa atual 
-                                                               (define destino_element (last direita_destino)) ;; pega o destino da peça da etapa atual 
+
+                                                               (define origem_element (last esquerda_origem)) ;; pega a origem da peça da etapa atual
+                                                               (define destino_element (last direita_destino)) ;; pega o destino da peça da etapa atual
                                                                (set! esquerda_origem (reverse (cdr (reverse esquerda_origem)))) ;; remove o ultimo elemento da lista
                                                                (set! direita_destino (reverse (cdr (reverse direita_destino)))) ;; remove o ultimo elemento da lista
-                                                               
+
                                                                ;;Se foi feita alguma movimentacao ele atualiza a tela, caso nao, ele atualiza e da gameOver
-                                                               (if (refreshMovimentacoes origem_element destino_element) (atualizarTela dc) (gameOverAutomatico dc)))]))
+                                                               (refreshMovimentacoes_automatico origem_element destino_element))]))
 
 
                                            )
                                          )]))
+
+
+; ==================================================================================================== Interface ao clicar começar
+; Cria um frame para o jogo em si
+(define frameJogo (new frame%
+                       [label "Monte o hamburger na mesa do cliente!"]
+                       [width 960]
+                       [height 540]))
+
+; Cria a área desenhavel do Jogo
+(define jogoCanva (new canvas%
+                       [parent frameJogo]
+                       [min-height 400]
+                       [paint-callback
+                        (lambda (canvas dc_aux)
+                          (set! dc dc_aux)
+                          (desenharBackground dc)
+                          (desenharPecas  dc torreCozinha cozinha 0)
+                          )]))
+
+(define painelBotoes (new horizontal-pane%
+                          [parent frameJogo]
+                          [spacing 225]
+                          [border 0]
+                          [alignment '(center center)]
+                          ))
+
+(define botaoCozinha (new button%
+                          [parent painelBotoes]
+                          [label "Cozinha"]
+                          [min-width 100]
+                          [min-height 50]
+                          [callback (lambda (button event)
+                                      (refreshEscolha (send botaoCozinha get-label))
+
+                                      (if (equal? (length torreCliente) altura)
+                                          (desenharGameOver dc)
+                                          (void))
+                                      )
+
+                                    ]))
+
+(define botaoGarcom (new button%
+                         [parent painelBotoes]
+                         [label "Garçom"]
+                         [min-width 100]
+                         [min-height 50]
+                         [callback (lambda (button event)
+                                     (refreshEscolha (send botaoGarcom get-label))
+
+                                     (if (equal? (length torreCliente) altura)
+                                         (desenharGameOver dc)
+                                         (void)
+                                         ))]))
+
+(define botaoCliente (new button%
+                          [parent painelBotoes]
+                          [label "Cliente"]
+                          [min-width 100]
+                          [min-height 50]
+                          [callback (lambda (button event)
+                                      (refreshEscolha (send botaoCliente get-label))
+
+                                      (if (equal? (length torreCliente) altura)
+                                          (desenharGameOver dc)
+                                          (void)
+                                          ))]))
+
+
+
+; ==================================================================================================== Interface ao clicar solucionar
+; Cria o frame para o computador jogar
+(define frameAutomatico (new frame%
+                             [label "O computador resolverá o problema"]
+                             [width 960]
+                             [height 540]))
+
+
+
+; Cria o frame pro computador jogar
+(define jogoAutomatico (new canvas%
+                            [parent frameAutomatico]
+                            [paint-callback
+                             (lambda (canvas dc_aux)
+                               (set! dc dc_aux)
+                               (send dc set-scale 2 2)
+                               (send dc draw-text "Cozinha" 65 230)
+                               (send dc draw-text "Garçom" 215 230)
+                               (send dc draw-text "Cliente" 365 230)
+                               (desenharBackground dc)
+                               (desenharTorres dc torreCozinha torreGarcom torreCliente cozinha garcom cliente)
+                               (send timer start 1000)
+                               )]))
 
 ; ========================================================================== Jogo
 
@@ -96,27 +192,62 @@
     )
   )
 
+(define (desenharGameOver dc)
+  (define gameOver (make-object bitmap% "img/gameover.jpg"))
+  (send dc set-scale 1 0.7)
+  (send dc draw-bitmap gameOver 200 20)
+  )
+
 ;; funcao que realiza as transferencias de uma peça do topo de uma torre para o topo de outra torre
+(define (refreshMovimentacoes_automatico origem destino)
+  ; a cada 1s, while esquerda.at(pos)!=empty
+  ;      transferir peça
+  ;      desenharTorres
+
+  (cond
+    [(string=?  origem "Cozinha")
+     (if (string=? destino "Garçom") (transferirCozinhaGarcom)
+         (transferirCozinhaCliente))(atualizarTela dc)
+                                    ]
+    [(string=? origem "Garçom")
+     (if (string=? destino "Cozinha") (transferirGarcomCozinha)
+         (transferirGarcomCliente)
+         )(atualizarTela dc)
+          ]
+    [(string=? origem "Cliente")
+     (if (string=? destino "Cozinha") (transferirClienteCozinha)
+         (transferirClienteGarcom))(atualizarTela dc)
+                                   ]
+    [else "Movimento Invalido"]
+    )
+  (if (equal? (length torreCliente) altura)
+      (gameOverAutomatico dc) (void))
+
+  )
+
 (define (refreshMovimentacoes origem destino)
   ; a cada 1s, while esquerda.at(pos)!=empty
   ;      transferir peça
   ;      desenharTorres
+
   (cond
     [(string=?  origem "Cozinha")
      (if (string=? destino "Garçom") (transferirCozinhaGarcom)
-         (transferirCozinhaCliente))
-     ]
+         (transferirCozinhaCliente))(atualizarTela dc)
+                                    ]
     [(string=? origem "Garçom")
      (if (string=? destino "Cozinha") (transferirGarcomCozinha)
          (transferirGarcomCliente)
-         )
-     ]
+         )(atualizarTela dc)
+          ]
     [(string=? origem "Cliente")
      (if (string=? destino "Cozinha") (transferirClienteCozinha)
-         (transferirClienteGarcom))
-     ]
-    [else #f]
+         (transferirClienteGarcom))(atualizarTela dc)
+                                   ]
+    [else "Movimento Invalido"]
     )
+  (atualizarTela dc)
+
   )
 
 ;; função que desenha todas as torres
@@ -129,6 +260,70 @@
 
 (define (desenhaPecaTopo dc destino_struct destino_lista peca)
   (send dc draw-bitmap (ingrediente-imagem (peca-ingrediente peca))  (torre-x destino_struct) (- (torre-y destino_struct) (* constanteContador (length destino_lista))))
+  )
+
+(define (getTorreClicada posX)
+  (cond
+    [(equal? posX (torre-x cozinha)) "Cozinha"]
+    [(equal? posX (torre-x garcom)) "Garcom"]
+    [(equal? posX (torre-x cliente)) "Cliente"]
+    [else empty]
+    )
+  )
+
+
+(define (resetarVariaveisChoice)
+  (set! torreDestino empty)
+  (set! torreOrigem empty)
+  )
+
+(define (callbackDoClicarPeca torreClicada)
+  ;; chamar a funcao get torre clicada aqui
+  (cond
+    [(empty? (getTorre torreClicada))
+     (printf "Torre Vazia")
+     ]
+    [else (set! torreOrigem torreClicada)]
+    )
+  )
+
+(define (getTorre nome)
+  (cond
+    [(string=?  nome "Cozinha")
+     torreCozinha
+     ]
+    [(string=? nome "Garçom")
+     torreGarcom
+     ]
+    [(string=? nome "Cliente")
+     torreCliente
+     ]
+    [else "Erro Click"]
+    )
+  )
+
+(define (callbackDoClicarTorre torreClicada)
+  (cond
+    [(string=? torreClicada torreOrigem) (resetarVariaveisChoice)]
+    [(empty? (getTorre torreClicada))
+     (set! torreDestino torreClicada)
+     (refreshMovimentacoes torreOrigem torreDestino)
+     (resetarVariaveisChoice)]
+    [(> (peca-valor (last (getTorre torreClicada))) (peca-valor (last (getTorre torreOrigem))))
+     (set! torreDestino torreClicada)
+     (refreshMovimentacoes torreOrigem torreDestino)
+     (resetarVariaveisChoice)]
+    [else "Erro Click"]
+    )
+
+  )
+
+
+
+(define (refreshEscolha torreClicada)
+
+  (if (equal? torreOrigem empty) (callbackDoClicarPeca torreClicada) (callbackDoClicarTorre torreClicada))
+
   )
 
 ;;============================================================================ Funções trasnferencia de torre
@@ -191,6 +386,11 @@
 (define torreGarcom empty)
 (define torreCliente empty)
 
+(define torreOrigem empty)
+(define torreDestino empty)
+
+(define altura 0)
+
 (define cozinha (make-torre "Cozinha" 63 165))
 (define garcom (make-torre "Garçom" 210 165))
 (define cliente (make-torre "Cliente" 356 165))
@@ -198,7 +398,6 @@
 (define esquerda_origem empty)
 
 (define direita_destino empty)
-
 
 ; ========================================================================== Ingredientes do Hamburger
 (define peca_valor2 (make-object bitmap% "img/carne.png"))
@@ -226,6 +425,15 @@
 (define lista-ingredientes (list paoBase carne queijo alface tomate))
 
 ; Função que gera torre de acordo com o valor fornecido pelo usuário
+
+(define (gerarTorre2 n contador)
+  (cond
+    [(equal? n 1) (cons (make-peca 1 (make-ingrediente "PãoTopo" (get-at lista_paos (sub1 contador)))) empty)]
+    [else (cons (make-peca n (get-at lista-ingredientes contador)) (gerarTorre (sub1 n) (add1 contador)))]
+    )
+  )
+
+
 (define (gerarTorre n contador)
   (cond
     [(equal? n 1) (cons (make-peca 1 (make-ingrediente "PãoTopo" (get-at lista_paos (sub1 contador)))) empty)]
@@ -245,8 +453,8 @@
 (define (gameOverAutomatico dc)
   (desenharBackground dc)
   (desenharTorres dc torreCozinha torreGarcom torreCliente cozinha garcom cliente)
+  (desenharGameOver dc)
   (send timer stop)
-  (printf "VOCE GANHOU")
   ;;ESCREVER ALGO COMO GAME OVER, VOCE GANHOU
   )
 
@@ -272,7 +480,7 @@
   )
 
 (define (imprimir-peca peca)
-  (if (peca? peca) (printf "Valor da peça: ~a / Nome da Peça: ~a\n " (peca-valor peca) (ingrediente-nome (peca-ingrediente peca))) (printf ""))
+  (if (peca? peca) (printf "Valor da peça: ~a / Nome da Peça: ~a\n " (peca-valor peca) (ingrediente-nome (peca-ingrediente peca))) (void))
   )
 
 (define (imprimir-pecas torre nomeTorre)
@@ -289,50 +497,7 @@
         (set! dir (cons (cadr valores) dir))))
     (values esq dir)))
 
-
-; ========================================================================== Interface
-; Cria um frame para o jogo em si
-(define frameJogo (new frame%
-                       [label "Monte o hamburger na mesa do cliente!"]
-                       [width 960]
-                       [height 540]))
-
-; Cria o frame para o computador jogar
-(define frameAutomatico (new frame%
-                             [label "Monte o hamburger na mesa do cliente!"]
-                             [width 960]
-                             [height 540]))
-
-; Cria a área desenhavel do Jogo
-(define jogoCanva (new canvas%
-                       [parent frameJogo]
-                       [paint-callback
-                        (lambda (canvas dc_aux)
-                          (set! dc dc_aux)
-                          (send dc set-scale 2 2)
-                          (send dc draw-text "Cozinha" 65 230)
-                          (send dc draw-text "Garçom" 215 230)
-                          (send dc draw-text "Cliente" 365 230)
-                          (desenharBackground dc)
-                          (desenharPecas  dc torreCozinha cozinha 0)
-
-                          )]))
-
-; Cria o frame pro computador jogar
-(define jogoAutomatico (new canvas%
-                            [parent frameAutomatico]
-                            [paint-callback
-                             (lambda (canvas dc_aux)
-                               (set! dc dc_aux)
-                               (send dc set-scale 2 2)
-                               (send dc draw-text "Cozinha" 65 230)
-                               (send dc draw-text "Garçom" 215 230)
-                               (send dc draw-text "Cliente" 365 230)
-                               (desenharBackground dc)
-                               (desenharTorres dc torreCozinha torreGarcom torreCliente cozinha garcom cliente)
-                               (send timer start 1000)
-                               )]))
+; ========================================================================== Primeiro comando de mostrar tela inicial
 
 ; Mostra a janela inicial do menu
 (send frameMenu show #t)
-
