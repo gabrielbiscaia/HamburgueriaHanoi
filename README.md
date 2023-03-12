@@ -1,3 +1,7 @@
+Autores:
+  Gabriel Crespo Biscaia        RA118928
+  Pedro Henrique Romano Zafalon RA120117
+
 Jogo da "Torre Hanói", com tematica de hamburgueria.
 
 O jogo é feito na linguagem Racket, sendo sua interface feito com a biblioteca nativa, racket/gui.
